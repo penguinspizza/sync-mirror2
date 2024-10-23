@@ -1,0 +1,37 @@
+name: Sync sync-origin to multiple mirrors
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    if: github.repository == 'penguinspizza/sync-origin'  # sync-originでのみ動作
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Clone sync-origin
+      - name: Clone sync-origin
+        run: |
+          git clone https://penguinspizza:${{ secrets.PAT }}@github.com/penguinspizza/sync-origin.git
+
+      # Sync to multiple mirrors
+      - name: Sync to mirrors
+        run: |
+          mirrors=(
+            "sync-mirror"  # 反映先リポジトリ1
+            "sync-mirror2" # 反映先リポジトリ2
+          )
+          for repo in "${mirrors[@]}"; do
+            git clone https://penguinspizza:${{ secrets.PAT }}@github.com/penguinspizza/$repo.git
+            rsync -a --exclude '.git' sync-origin/ $repo/  # .gitフォルダを除外してコピー
+            cd $repo
+            git config user.name "penguinspizza"
+            git config user.email "72650078+penguinspizza@users.noreply.github.com"
+            git add .
+            git commit -m "Sync from sync-origin"
+            git push origin main
+            cd ..
+          done
