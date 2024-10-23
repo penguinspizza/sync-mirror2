@@ -17,21 +17,26 @@ jobs:
         run: |
           git clone https://penguinspizza:${{ secrets.PAT }}@github.com/penguinspizza/sync-origin.git
 
-      # Sync to multiple mirrors
+      # Sync to multiple mirrors with specified branches
       - name: Sync to mirrors
         run: |
+          # リポジトリ名とブランチ名のペアを定義
           mirrors=(
-            "sync-mirror"  # 反映先リポジトリ1
-            "sync-mirror2" # 反映先リポジトリ2
+            "sync-mirror:main"      # 反映先リポジトリ1 と ブランチ
+            "sync-mirror2:develop"  # 反映先リポジトリ2 と ブランチ
           )
-          for repo in "${mirrors[@]}"; do
-            git clone https://penguinspizza:${{ secrets.PAT }}@github.com/penguinspizza/$repo.git
+          for pair in "${mirrors[@]}"; do
+            IFS=':' read -r repo branch <<< "$pair"  # リポジトリ名とブランチ名を分割
+            
+            # 指定されたブランチを使ってリポジトリをクローン
+            git clone --branch $branch https://penguinspizza:${{ secrets.PAT }}@github.com/penguinspizza/$repo.git
+            
             rsync -a --exclude '.git' sync-origin/ $repo/  # .gitフォルダを除外してコピー
             cd $repo
             git config user.name "penguinspizza"
             git config user.email "72650078+penguinspizza@users.noreply.github.com"
             git add .
             git commit -m "Sync from sync-origin"
-            git push origin main
+            git push
             cd ..
           done
